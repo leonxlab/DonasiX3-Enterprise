@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Display Panel</title>
+    <link rel="stylesheet" type="text/css" href="display.css" />
+
+    <!-- Firebase & Chart.js -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <div class="aspect-box">
+      <br /><br />
+      <br />
+      <br />
+
+      <!--Judul-->
+      <center>
+        <h1 class="loading"></h1>
+        <h1 class="judulatas">
+          JAMUAN KASIH<br />
+          HKBP PERUMNAS II BEKASI - EFRATA 2025
+        </h1>
+      </center>
+      <br />
+      <br />
+      <br />
+      <br />
+      <br />
+
+      <div id="top3Container" class="top3-container loading"></div>
+
+      <div class="main-content loading">
+        <div class="chart-section glass-container">
+          <!-- track + fill bar -->
+          <div class="progress-bar">
+            <div id="barFill" class="progress-bar-fill"></div>
+          </div>
+
+          <!-- teks di bawah -->
+          <div id="progressDisplay" class="progress-display"></div>
+        </div>
+
+        <div class="donors-section glass-container">
+          <div class="donors-scroll">
+            <ul id="donorsList" class="donors-list"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Popup Informasi -->
+      <div id="popup" class="info-popup" style="display: none">
+        <div class="info-header">
+          <span class="info-icon">ⓘ</span>
+          <h1>Informasi</h1>
+        </div>
+        <div id="popupText" class="info-body"></div>
+      </div>
+
+      <script>
+        // Inisialisasi Firebase
+        firebase.initializeApp({
+          databaseURL:
+            "",
+        });
+        const db = firebase.database();
+
+        // 1) Ketika kontrol/sheetTerpilih berubah (ganti sheet)
+        db.ref("kontrol/sheetTerpilih").on("value", (snap) => {
+          const sel = snap.val();
+          if (sel && sel !== sheetTerpilih) {
+            sheetTerpilih = sel;
+            updateDisplay();
+          }
+        });
+
+        // State
+        let rawSheetsData = {};
+        let sheetTerpilih = null;
+        let currentTarget = 0;
+        let dataDonatur = [];
+        let donutChart = null;
+        let infoTimeout = null;
+        let dataWilayah = [];
+        let isSheetsLoaded = false;
+        let isLogLoaded = false;
+        let initialDonors = []; // bakal kita tampilkan sekali setelah data siap
+        let highlightTimeouts = {}; // key = donorKey, value = timeoutId
+        let knownDonors = {}; // key = nama||wilayah
+
+        // Ambil target dari sel G2
+        function applyTargetFromSheet() {
+          const sheet = rawSheetsData[sheetTerpilih] || {};
+          const g2 = sheet.G2?.value;
+          if (!isNaN(Number(g2))) {
+            currentTarget = Number(g2);
+          }
+        }
+
+        // --- Parsing sheet per baris (abaikan merge) ---
+        // Parsing sheet per baris & meng-agregasi nama yang sama
+        function parseSheet(sheet) {
+          const rows = {};
+          for (const cell in sheet) {
+            const itm = sheet[cell];
+            if (!itm.value || itm.merge?.length > 0) continue;
+            const m = cell.match(/^([A-Z]+)(\d+)$/);
+            if (!m) continue;
+            const [, col, row] = m;
+            rows[row] = rows[row] || {};
+            rows[row][col] = itm.value;
+          }
+          return Object.values(rows)
+            .filter((r) => r.A && r.B && !isNaN(r.B))
+            .map((r) => ({
+              nama: String(r.A).trim(),
+              jumlah: Number(r.B),
+              wilayah: r.C ? String(r.C).trim() : "",
+            }));
+        }
+
+        function createNewDonorPopup(donorData) {
+          const popup = document.createElement("div");
+          popup.className = "new-donor-popup";
+          popup.innerHTML = `
+            <div class="popup-header">🎉 DONATUR BARU! 🎉</div>
+            <div class="popup-name">${donorData.nama}</div>
+            <div class="popup-amount">Rp ${donorData.jumlah.toLocaleString(
+              "id-ID"
+            )}</div>
+          `;
+          document.body.appendChild(popup);
+
+          // Show popup
+          setTimeout(() => popup.classList.add("show"), 100);
+
+          // Hide popup after 3 seconds
+          setTimeout(() => {
+            popup.classList.remove("show");
+            setTimeout(() => popup.remove(), 500);
+          }, 3000);
+        }
+
+        function highlightDonor(donorKey, donorData) {
+          // Show popup
+          createNewDonorPopup(donorData);
+
+          // Clear existing highlight timeout if any
+          if (highlightTimeouts[donorKey]) {
+            clearTimeout(highlightTimeouts[donorKey]);
+          }
+
+          // Find and highlight the donor in the list
+          const donorElements = document.querySelectorAll(
+            `[data-key="${donorKey}"]`
+          );
+          donorElements.forEach((element) => {
+            element.classList.add("new-highlight");
+          });
+
+          if (!highlightTimeouts[donorKey]) {
+            donorElements.forEach((el) => el.classList.add("new-highlight"));
+            // atur sekali untuk menghilangkan highlight setelah 5 menit
+            highlightTimeouts[donorKey] = setTimeout(() => {
+              donorElements.forEach((el) =>
+                el.classList.remove("new-highlight")
+              );
+              delete highlightTimeouts[donorKey];
+            }, 5 * 60 * 1000); // 5 menit
+          }
+        }
+
+        function checkForNewDonors() {
+          dataDonatur.forEach((donor) => {
+            const key = `${donor.nama}||${donor.wilayah}`;
+            const previousAmount = knownDonors[key] || 0;
+
+            if (donor.jumlah > previousAmount) {
+              // New donor or increased amount
+              if (previousAmount === 0) {
+                console.log("New donor detected:", donor.nama);
+              } else {
+                console.log(
+                  "Donor amount increased:",
+                  donor.nama,
+                  "from",
+                  previousAmount,
+                  "to",
+                  donor.jumlah
+                );
+              }
+              highlightDonor(key, donor);
+            }
+
+            // Update known donors
+            knownDonors[key] = donor.jumlah;
+          });
+        }
+
+        function initializeKnownDonors() {
+          dataDonatur.forEach((d) => {
+            const key = `${d.nama}||${d.wilayah}`;
+            knownDonors[key] = d.jumlah;
+          });
+        }
+
+        // Panggil initializeKnownDonors() sekali setelah dataDonatur pertama-tama dirender
+        db.ref("sheets")
+          .once("value")
+          .then(() => {
+            updateDisplay();
+            applyTargetFromSheet();
+            initializeKnownDonors();
+          });
+
+        function parseAndAggregate(sheet) {
+          const agg = {};
+          for (const cell in sheet) {
+            const itm = sheet[cell];
+            if (!itm.value || itm.merge?.length) continue;
+            const [, col, row] = cell.match(/^([A-Z]+)(\d+)$/) || [];
+            if (!col || !row) continue;
+            // kita hanya butuh kolom A (nama), B (jumlah), C (wilayah)
+            if (!agg[row]) agg[row] = {};
+            agg[row][col] = itm.value;
+          }
+          // sekarang ubah jadi array dan agregasi per nama
+          const byName = {};
+          Object.values(agg)
+            .filter((r) => r.A && r.B)
+            .forEach((r) => {
+              const nama = String(r.A).trim();
+              const wilayah = r.C ? String(r.C).trim() : "—";
+              const jumlah = Number(r.B);
+              if (!byName[nama]) byName[nama] = { nama, wilayah, jumlah: 0 };
+              byName[nama].jumlah += jumlah;
+            });
+          // return sorted desc
+          return Object.values(byName).sort((a, b) => b.jumlah - a.jumlah);
+        }
+
+        function aggregateDonors(list) {
+          const map = {};
+          list.forEach((d) => {
+            if (!map[d.nama]) {
+              // buat salinan awal
+              map[d.nama] = { ...d };
+            } else {
+              // jumlahkan jumlah
+              map[d.nama].jumlah += d.jumlah;
+
+              //bug jumlah
+
+              // jika belum ada wilayah, isi dari yang baru
+              if (!map[d.nama].wilayah && d.wilayah) {
+                map[d.nama].wilayah = d.wilayah;
+              }
+            }
+          });
+          return Object.values(map);
+        }
+
+        function renderTop3() {
+          const top3 = dataDonatur.slice(0, 3);
+          document.getElementById("top3Container").innerHTML = top3
+            .map((d) => {
+              const key = `${d.nama}||${d.wilayah}`;
+              return `
+                <div class="top3-card" data-key="${key}">
+                  <div class="wilayah">${d.wilayah}</div>
+                  <div class="donor-name">
+                    ${d.nama.replace(/\s*\/\s*/, "<br>/")}
+                  </div>
+                  <div class="amount">Rp ${d.jumlah.toLocaleString(
+                    "id-ID"
+                  )}</div>
+                </div>
+              `;
+            })
+            .join("");
+        }
+
+        function renderDonorsList() {
+          const ul = document.getElementById("donorsList");
+          const others = dataDonatur
+            .slice()
+            .sort((a, b) => b.jumlah - a.jumlah)
+            .slice(3);
+
+          // render ulang list
+          ul.innerHTML = others
+            .map((d) => {
+              const key = `${d.nama}||${d.wilayah}`;
+              return `
+              <li class="donor-item" data-key="${key}">
+                <span class="donor-name-list">${d.nama}</span>
+                <span class="donor-amount">Rp ${d.jumlah.toLocaleString(
+                  "id-ID"
+                )}</span>
+              </li>
+            `;
+            })
+            .join("");
+
+          setupInfiniteScroll();
+        }
+        function setupInfiniteScroll() {
+          const ul = document.getElementById("donorsList");
+          // Ambil hanya elemen asli (tanpa .clone)
+          const originals = Array.from(ul.children).filter(
+            (li) => !li.classList.contains("clone")
+          );
+
+          // Hapus duplikat lama
+          ul.querySelectorAll(".clone").forEach((n) => n.remove());
+
+          // Jika lebih dari 11 donor → duplikat + scrolling
+          if (originals.length > 11) {
+            originals.forEach((li) => {
+              const clone = li.cloneNode(true);
+              clone.classList.add("clone");
+              ul.appendChild(clone);
+            });
+            ul.classList.add("scrolling");
+          } else {
+            // Kalau 11 atau kurang → hentikan scrolling
+            ul.classList.remove("scrolling");
+          }
+        }
+
+        // Render Chart & Progress
+        function renderChart() {
+          const total = dataDonatur.reduce((s, d) => s + d.jumlah, 0);
+          const pct =
+            currentTarget > 0
+              ? Math.min(100, Math.round((total / currentTarget) * 100))
+              : 0;
+
+          // update tinggi fill-bar
+          const fillEl = document.getElementById("barFill");
+          fillEl.style.height = pct + "%";
+
+          // update teks progres
+          document.getElementById("progressDisplay").innerHTML = `
+            <div class="progress-amount">
+              Rp ${total.toLocaleString("id-ID")}
+            </div>
+            <div class="progress-amount">
+              / Rp ${currentTarget.toLocaleString("id-ID")}
+            </div>
+            <br>
+            <div class="progress-percentage">
+              ${pct}%
+            </div>
+          `;
+        }
+
+        function renderAll() {
+          renderTop3();
+          renderDonorsList();
+          renderChart();
+
+          // Check for new donors after rendering
+          setTimeout(() => {
+            checkForNewDonors();
+          }, 100);
+        }
+
+        function adjustScrolling(count) {
+          const ul = document.getElementById("donorsList");
+          if (count >= 2) ul.classList.add("loop");
+          else ul.classList.remove("loop");
+        }
+
+        // Tampilkan Popup Pengumuman
+        function showInfo(text) {
+          const popup = document.getElementById("popup");
+          const body = document.getElementById("popupText");
+          popup.style.display = "flex";
+          body.innerText = text;
+
+          // Bersihkan jika ada timeout lama
+          if (infoTimeout) clearTimeout(infoTimeout);
+
+          // Setelah 15 detik: mulai fade-out selama 1 detik, lalu sembunyikan
+          infoTimeout = setTimeout(() => {
+            popup.classList.add("fade-out");
+            setTimeout(() => {
+              popup.style.display = "none";
+              popup.classList.remove("fade-out");
+            }, 1000);
+          }, 15000);
+        }
+
+        function updateDisplay() {
+          // 1) Ambil G2 sebagai target
+          applyTargetFromSheet();
+
+          // 2) Parse sheet jadi array raw
+          const raw = parseSheet(rawSheetsData[sheetTerpilih] || {});
+
+          // 3) Agregasi duplikat (nama+wilayah)
+          aggMap = {};
+          raw.forEach((d) => {
+            const key = `${d.nama}||${d.wilayah}`;
+            if (!aggMap[key]) {
+              aggMap[key] = { ...d, key };
+            } else {
+              aggMap[key].jumlah += d.jumlah;
+            }
+          });
+
+          // 4) Ubah ke array dan sortir descending
+          dataDonatur = Object.values(aggMap).sort(
+            (a, b) => b.jumlah - a.jumlah
+          );
+
+          // 5) Render ulang semua
+          renderAll();
+        }
+
+        const known = {};
+        function initKnown() {
+          dataDonatur.forEach(
+            (d) => (known[`${d.nama}||${d.wilayah}`] = d.jumlah)
+          );
+        }
+
+        function showNewDonorPopup({ nama, wilayah, jumlah }) {
+          const popup = document.getElementById("popup");
+          document.getElementById("popupText").innerHTML = `
+    <div class="new-donor">
+      <strong>${nama} (${wilayah})</strong><br>
+      Rp ${jumlah.toLocaleString("id-ID")}
+    </div>`;
+          popup.classList.add("sprinkle", "glow");
+          popup.style.display = "flex";
+          setTimeout(() => {
+            popup.classList.remove("sprinkle", "glow");
+            popup.style.display = "none";
+          }, 8000);
+        }
+
+        // fungsi pengecekan:
+        function maybeRenderInitialList() {
+          if (!isSheetsLoaded || !isLogLoaded) return;
+          // setelah kedua load, parse + render list (sekali saja)
+          dataDonatur = parseSheet(rawSheetsData[sheetTerpilih] || {});
+          renderAll();
+          // mulai listen entri baru untuk popup
+          listenNewDonorPopup();
+        }
+
+        function aggregateAndParse(sheet) {
+          const rows = {};
+          for (let cell in sheet) {
+            const itm = sheet[cell];
+            if (!itm.value || itm.merge?.length) continue;
+            const m = cell.match(/^([A-Z]+)(\d+)$/);
+            if (!m) continue;
+            const [_, col, row] = m;
+            rows[row] = rows[row] || {};
+            rows[row][col] = itm.value;
+          }
+          // ambil A=nama, B=jumlah, C=wilayah
+          const list = Object.values(rows)
+            .filter((r) => r.A && r.B && r.C && !isNaN(r.B))
+            .map((r) => ({ nama: r.A, jumlah: +r.B, wilayah: r.C }));
+          // agregasi
+          const agg = {};
+          for (let d of list) {
+            const key = `${d.nama}||${d.wilayah}`;
+            if (!agg[key]) agg[key] = { ...d };
+            else agg[key].jumlah += d.jumlah;
+          }
+          return Object.values(agg);
+        }
+
+        // showDonorPopup dengan efek sprinkle/glow
+        function showDonorPopup({ nama, jumlah, wilayah }) {
+          const popup = document.createElement("div");
+          popup.className = "new-donor-popup";
+          popup.innerHTML = `
+    <div class="nd-content">
+      <div class="nd-name">${nama} (${wilayah})</div>
+      <div class="nd-amount">Rp ${jumlah.toLocaleString("id-ID")}</div>
+    </div>
+  `;
+          document.body.append(popup);
+
+          // keluarkan animasi sprinkle/glow via CSS class
+          setTimeout(() => popup.classList.add("show"), 10);
+          // hide setelah 5 detik, lalu remove
+          setTimeout(() => {
+            popup.classList.remove("show");
+            setTimeout(() => popup.remove(), 1000);
+          }, 5000);
+        }
+
+        // Firebase listeners
+        db.ref("sheets").on("value", (snap) => {
+          rawSheetsData = snap.val() || {};
+          isSheetsLoaded = true;
+
+          // kalau belum ada sheetTerpilih, ambil pertama
+          if (!sheetTerpilih) {
+            sheetTerpilih = Object.keys(rawSheetsData)[0];
+            db.ref("kontrol").update({ sheetTerpilih });
+          }
+
+          updateDisplay();
+
+          // Initialize known donors on first load
+          if (Object.keys(knownDonors).length === 0) {
+            initializeKnownDonors();
+          }
+        });
+
+        db.ref("log")
+          .orderByChild("waktu")
+          .on("child_added", (snap) => {
+            const e = snap.val();
+            const key = `${e.nama}||${e.wilayah || ""}`;
+            const jumlahBaru = Number(e.jumlah);
+
+            // tambahkan ke aggMap
+            if (!aggMap[key]) {
+              aggMap[key] = {
+                key,
+                nama: e.nama,
+                wilayah: e.wilayah || "",
+                jumlah: 0,
+              };
+            }
+            aggMap[key].jumlah += jumlahBaru;
+
+            // rebuild dataDonatur & re-render
+            dataDonatur = Object.values(aggMap).sort(
+              (a, b) => b.jumlah - a.jumlah
+            );
+            renderAll();
+
+            // (opsional) highlight jika bukan top3
+            const idx = dataDonatur.findIndex((d) => d.key === key);
+            if (idx >= 3) highlightDonorInList(key);
+          });
+
+        db.ref("log").once("value", (snap) => {
+          // kita tidak render log ini, tapi menunggu sheets dulu
+          isLogLoaded = true;
+          maybeRenderInitialList();
+        });
+
+        db.ref("kontrol").on("value", (snap) => {
+          const c = snap.val() || {};
+          let changed = false;
+          if (c.sheetTerpilih && c.sheetTerpilih !== sheetTerpilih) {
+            sheetTerpilih = c.sheetTerpilih;
+            changed = true;
+          }
+          if (c.target != null && c.target !== currentTarget) {
+            currentTarget = c.target;
+            changed = true;
+          }
+          if (changed) updateDisplay();
+        });
+
+        db.ref("kontrol/popup").on("value", (snap) => {
+          const v = snap.val();
+          if (v?.trigger && v.text) {
+            showInfo(v.text);
+            db.ref("kontrol/popup/trigger").set(false);
+          }
+        });
+
+        db.ref("sheets").on("value", (snap) => {
+          rawSheetsData = snap.val() || {};
+          // jika G2 berubah, applyTargetFromSheet() membaca ulang
+          applyTargetFromSheet();
+          updateDisplay();
+        });
+
+        // Add loading animation trigger
+        document.addEventListener("DOMContentLoaded", () => {
+          setTimeout(() => {
+            document.querySelectorAll(".loading").forEach((el) => {
+              el.classList.remove("loading");
+            });
+          }, 100);
+        });
+      </script>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>DonasiX3 Enterprise - Admin Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    // Electron IPC (jika di Electron)
+    let ipc = null;
+    if (typeof require !== 'undefined') {
+      const { ipcRenderer } = require('electron');
+      ipc = ipcRenderer;
+    }
+  </script>
+  
+    <link rel="stylesheet" type="text/css" href="admin.css" />
+</head>
+
+<body>
+  <div class="main-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="logo">
+        <h1><i class="fas fa-donate"></i> DonasiX3</h1>
+        <p>Enterprise Edition • LeonXlab</p>
+      </div>
+
+      <div class="sidebar-content">
+        <!-- Sheet Selection -->
+        <div class="section">
+          <div class="section-title">
+            <i class="fas fa-table"></i>
+            Data Source
+          </div>
+          <div class="control-group">
+            <h3>Sheet Selection</h3>
+            <div class="form-row">
+              <select id="pilihSheet">
+                <option value="">Select a sheet...</option>
+              </select>
+            </div>
+            <button id="btnSheet" class="btn btn-primary">
+              <i class="fas fa-check"></i> Apply Sheet
+            </button>
+          </div>
+        </div>
+
+        <!-- Target Settings -->
+        <div class="section">
+          <div class="section-title">
+            <i class="fas fa-bullseye"></i>
+            Target Settings
+          </div>
+          <div class="control-group">
+            <h3>Donation Target</h3>
+            <div class="form-row">
+              <input id="target" type="number" placeholder="Enter target amount" />
+            </div>
+            <button id="btnTarget" class="btn btn-success">
+              <i class="fas fa-save"></i> Set Target
+            </button>
+          </div>
+        </div>
+
+        <!-- Announcements -->
+        <div class="section">
+          <div class="section-title">
+            <i class="fas fa-bullhorn"></i>
+            Announcements
+          </div>
+          <div class="control-group">
+            <h3>Popup Message</h3>
+            <div class="form-row">
+              <input id="popupText" type="text" placeholder="Enter announcement message..." />
+            </div>
+            <button id="btnPopup" class="btn btn-warning">
+              <i class="fas fa-broadcast-tower"></i> Show Popup
+            </button>
+          </div>
+        </div>
+
+        <!-- Display Control -->
+        <div class="section">
+          <div class="section-title">
+            <i class="fas fa-desktop"></i>
+            Display Control
+          </div>
+          <div class="control-group">
+            <h3>Fullscreen Mode</h3>
+            <button id="btnFSIn" class="btn btn-success">
+              <i class="fas fa-expand"></i> Enter Fullscreen
+            </button>
+            <button id="btnFSOut" class="btn btn-danger" style="margin-top: 0.75rem;">
+              <i class="fas fa-compress"></i> Exit Fullscreen
+            </button>
+          </div>
+        </div>
+
+        <!-- About Developer -->
+        <div class="section">
+          <div class="section-title">
+            <i class="fas fa-user-tie"></i>
+            About Developer
+          </div>
+          <div class="control-group">
+            <h3>DonasiX3 Enterprise</h3>
+            <p style="margin: 0.75rem 0; color: #718096; font-size: 0.9rem; line-height: 1.5;">
+              <strong>Version:</strong> v1.0.0-alpha<br>
+              <strong>Developer:</strong> LeonXlab<br>
+              <em>For non-commercial use only</em>
+            </p>
+            <div class="developer-links">
+              <button class="btn btn-linkedin" onclick="window.open('https://www.linkedin.com/in/leonard-manurung', '_blank')">
+                <i class="fab fa-linkedin"></i> LinkedIn
+              </button>
+              <button class="btn btn-github" onclick="window.open('https://github.com/leonxlab', '_blank')">
+                <i class="fab fa-github"></i> GitHub
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Top Bar -->
+      <div class="top-bar">
+        <h2>
+          <i class="fas fa-tachometer-alt"></i>
+          Control Center
+          <div class="status-indicator" id="connectionStatus">
+            <div class="status-dot"></div>
+            Connected
+          </div>
+        </h2>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <!-- System Info -->
+        <div class="info-section">
+          <div class="info-header">
+            <i class="fas fa-info-circle"></i>
+            <h3>System Information</h3>
+          </div>
+          <table class="info-table">
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="label"><i class="fas fa-clock"></i> Time (WIB)</td>
+                <td id="clock" class="value">--:--:--</td>
+              </tr>
+              <tr>
+                <td class="label"><i class="fas fa-stopwatch"></i> Uptime</td>
+                <td id="uptime" class="value">--</td>
+              </tr>
+              <tr>
+                <td class="label"><i class="fas fa-desktop"></i> Platform</td>
+                <td id="platform" class="value">--</td>
+              </tr>
+              <tr>
+                <td class="label"><i class="fas fa-tv"></i> Resolution</td>
+                <td id="resolution" class="value">--</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Runtime Info -->
+        <div class="info-section">
+          <div class="info-header">
+            <i class="fas fa-cogs"></i>
+            <h3>Runtime Details</h3>
+          </div>
+          <table class="info-table">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="label"><i class="fas fa-code"></i> Engine</td>
+                <td id="userAgent" class="value">--</td>
+              </tr>
+              <tr>
+                <td class="label"><i class="fas fa-map-marker-alt"></i> Location</td>
+                <td id="location" class="value">--</td>
+              </tr>
+              <tr>
+                <td class="label"><i class="fas fa-memory"></i> Memory</td>
+                <td id="memory" class="value">--</td>
+              </tr>
+              <tr>
+                <td class="label"><i class="fas fa-wifi"></i> Connection</td>
+                <td id="connection" class="value">--</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // — Elektron IPC fullscreen
+  document.getElementById('btnFSIn').onclick = () => ipc && ipc.send('masuk-fullscreen');
+  document.getElementById('btnFSOut').onclick = () => ipc && ipc.send('keluar-fullscreen');
+
+  // — Live WIB clock & uptime
+  (() => {
+    const clk = document.getElementById('clock');
+    const up = document.getElementById('uptime');
+    const start = Date.now();
+    const fmt = new Intl.DateTimeFormat('id-ID', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false, timeZone: 'Asia/Jakarta'
+    });
+    setInterval(() => {
+      clk.textContent = fmt.format(new Date());
+      let s = Math.floor((Date.now() - start) / 1000);
+      const h = String(Math.floor(s / 3600)).padStart(2, '0');
+      const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      const sec = String(s % 60).padStart(2, '0');
+      up.textContent = `${h}h ${m}m ${sec}s`;
+    }, 1000);
+  })();
+
+  // — Static device info
+  document.getElementById('platform').textContent = navigator.platform || 'Unknown';
+  document.getElementById('userAgent').textContent = navigator.userAgent.substring(0, 50) + '...';
+  document.getElementById('resolution').textContent = `${screen.width}×${screen.height}`;
+  
+  // Memory info (if available)
+  if (navigator.deviceMemory) {
+    document.getElementById('memory').textContent = `${navigator.deviceMemory}GB`;
+  } else {
+    document.getElementById('memory').textContent = 'Not available';
+  }
+
+  // Connection info
+  if (navigator.connection) {
+    const conn = navigator.connection;
+    document.getElementById('connection').textContent = `${conn.effectiveType || 'Unknown'} (${conn.downlink || 'Unknown'}Mbps)`;
+  } else {
+    document.getElementById('connection').textContent = 'Unknown';
+  }
+
+  // — Geolocation
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude } = pos.coords;
+      document.getElementById('location').textContent = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    }, _ => {
+      document.getElementById('location').textContent = 'Denied/Unavailable';
+    });
+  }
+
+  // — Initialize Firebase and controls
+  document.addEventListener('DOMContentLoaded', () => {
+    firebase.initializeApp({
+      databaseURL: ""
+    });
+    const db = firebase.database();
+    const $ = id => document.getElementById(id);
+
+    // connection status
+    db.ref(".info/connected").on("value", snap => {
+      const statusEl = $("connectionStatus");
+      const isConnected = snap.val();
+      statusEl.classList.toggle("offline", !isConnected);
+      statusEl.innerHTML = `
+        <div class="status-dot ${!isConnected ? 'offline' : ''}"></div>
+        ${isConnected ? 'Connected' : 'Disconnected'}
+      `;
+    });
+
+    // rebuild sheet dropdown
+    const sel = $("pilihSheet");
+    db.ref('sheets').on('value', snap => {
+      const sheets = snap.val() || {};
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">Select a sheet...</option>' + 
+        Object.keys(sheets).map(n => `<option value="${n}">${n}</option>`).join('');
+      // restore or push back to kontrol
+      if (sheets[prev]) sel.value = prev;
+      else if (Object.keys(sheets).length > 0) {
+        sel.value = Object.keys(sheets)[0];
+        db.ref('kontrol').update({ sheetTerpilih: sel.value });
+      }
+    });
+    
+    // load last-used sheet
+    db.ref('kontrol/sheetTerpilih').once('value').then(snap => {
+      if (snap.exists()) sel.value = snap.val();
+    });
+
+    // button handlers with enhanced feedback
+    $("btnSheet").onclick = () => {
+      if (!sel.value) {
+        alert("Please select a sheet first!");
+        return;
+      }
+      db.ref('kontrol').update({ sheetTerpilih: sel.value });
+      
+      // Visual feedback
+      const btn = $("btnSheet");
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i> Applied!';
+      btn.style.background = 'linear-gradient(135deg, #48bb78, #38a169)';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.background = '';
+      }, 2000);
+    };
+    
+    $("btnTarget").onclick = () => {
+      const targetValue = Number($("target").value) || 0;
+      if (targetValue <= 0) {
+        alert("Please enter a valid target amount!");
+        return;
+      }
+      db.ref('kontrol').update({ target: targetValue });
+      
+      // Visual feedback
+      const btn = $("btnTarget");
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i> Target Set!';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+      }, 2000);
+    };
+    
+    $("btnPopup").onclick = () => {
+      const t = $("popupText").value.trim();
+      if (!t) {
+        alert("Please enter an announcement message!");
+        return;
+      }
+      db.ref('kontrol/popup').set({ text: t, trigger: true });
+      $("popupText").value = "";
+      
+      // Visual feedback
+      const btn = $("btnPopup");
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check"></i> Sent!';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+      }, 2000);
+    };
+  });
+  </script>
+</body>
+</html>

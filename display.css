@@ -1,0 +1,629 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  font-family: 'Inter', sans-serif;
+}
+
+.aspect-box {
+  width: 100%;
+  height: 100%;
+  max-width: calc(100vh * (4/3));
+  max-height: calc(100vw * (3/4));
+  aspect-ratio: 4 / 3;
+  position: relative;
+  background: #111;
+  overflow: hidden;
+}
+
+/* Animated Background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background:
+    radial-gradient(circle at 20% 80%, rgba(120,119,198,0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255,119,198,0.3) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(120,219,255,0.2) 0%, transparent 50%);
+  animation: backgroundShift 20s ease-in-out infinite alternate;
+  z-index: -1;
+}
+@keyframes backgroundShift {
+  0%   { transform: scale(1) rotate(0deg);   opacity: 0.3; }
+  100% { transform: scale(1.1) rotate(2deg); opacity: 0.5; }
+}
+
+/* Glassmorphism */
+.glass-container {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+h1 {
+  /* Gradient text */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* Chrome, Safari */
+  -webkit-background-clip: text;
+  /* Standar */
+  background-clip: text;
+  /* Chrome, Safari */
+  -webkit-text-fill-color: transparent;
+  /* Standar */
+  color: transparent;
+}
+
+@keyframes titleGlow {
+  0%   { filter: drop-shadow(0 0 10px rgba(102,126,234,0.3)); }
+  100% { filter: drop-shadow(0 0 20px rgba(118,75,162,0.5)); }
+}
+
+/* Top 3 cards */
+.top3-container {
+  display: flex;
+  justify-content: center;
+  gap: 100px;
+  margin-bottom: 60px;
+  perspective: 100px;
+}
+.top3-card {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  padding: 35px 30px;
+  min-width: 32%;
+  text-align: center;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+  overflow: hidden;
+}
+
+/* Animasi sprinkle */
+@keyframes sprinkle {
+  0%   { transform: translateY(-50px) scale(0); opacity:0; }
+  50%  { transform: translateY(0) scale(1.1); opacity:1; }
+  100% { transform: translateY(0) scale(1); opacity:1; }
+}
+.sprinkle {
+  animation: sprinkle 0.8s ease-out forwards;
+}
+
+/* Animasi glow */
+@keyframes glowIn {
+  from { box-shadow: 0 0 0px rgba(255,255,255,0); }
+  to   { box-shadow: 0 0 30px rgba(255,255,255,0.6); }
+}
+.glow {
+  animation: glowIn 1s ease-in-out infinite alternate;
+}
+
+/* Styling baru untuk new-donor */
+.new-donor {
+  text-align: center;
+  color: #fff;
+}
+.new-donor .nd-name {
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+.new-donor .nd-amount {
+  font-size: 2rem;
+  margin-top: 0.5rem;
+  color: #4ecdc4;
+}
+
+
+      /* Enhanced CSS untuk highlight effects */
+      .new-highlight {
+        background: linear-gradient(45deg, rgba(0, 255, 255, 0.2), rgba(255, 0, 255, 0.2), rgba(0, 255, 255, 0.2)) !important;
+        background-size: 400% 400% !important;
+        border: 2px solid #ff6b6b !important;
+        box-shadow: 0 0 20px #ff6b6b, inset 0 0 20px rgba(255, 255, 255, 0.1) !important;
+        animation: gradientShift 2s ease-in-out infinite, glowPulse 1.5s ease-in-out infinite !important;
+        position: relative !important;
+        overflow: hidden !important;
+      }
+
+      @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      @keyframes glowPulse {
+        0% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.1); }
+        50% { box-shadow: 0 0 30px #ff6b6b, inset 0 0 30px rgba(255, 255, 255, 0.2); }
+        100% { box-shadow: 0 0 15px #ff6b6b, inset 0 0 15px rgba(255, 255, 255, 0.1); }
+      }
+
+      .new-highlight::before {
+        content: "";
+        position: absolute;
+        top: -2px; left: -2px; right: -2px; bottom: -2px;
+        background: linear-gradient(45deg, #ff6b6b, #ff6b6b, #ff6b6b, #ff6b6b, #ff6b6b, #ff6b6b);
+        background-size: 600% 600%;
+        border-radius: inherit;
+        z-index: -1;
+        animation: borderGlow 3s linear infinite;
+      }
+
+      @keyframes borderGlow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      .new-highlight::after {
+        content: "🆕";
+        position: absolute;
+        top: 5px; right: 10px;
+        font-size: 5rem;
+        animation: bounce 1s ease-in-out infinite;
+      }
+
+      @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+      }
+
+      /* Top 3 highlight */
+      .top3-card.new-highlight {
+        background: linear-gradient(45deg, rgba(0, 255, 255, 0.3), rgba(255, 0, 255, 0.3)) !important;
+        border: 3px solid #ff6b6b !important;
+        box-shadow: 0 0 30px #ff6b6b, 0 0 60px rgba(255, 0, 255, 0.5) !important;
+        animation: topCardGlow 2s ease-in-out infinite !important;
+      }
+
+      @keyframes topCardGlow {
+        0% { transform: translateY(-15px) scale(1); }
+        50% { transform: translateY(-20px) scale(1.05); }
+        100% { transform: translateY(-15px) scale(1); }
+      }
+
+      /* ===== Popup “Donatur Baru” ===== */
+.new-donor-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  /* Pindahkan pivot ke tengah, dan scale jadi sedikit lebih kecil */
+  transform: translate(-50%, -50%) scale(10);
+  background: linear-gradient(135deg, #ff5100, #ff5100);
+  backdrop-filter: blur(20px);
+  border: 2px solid #fff;
+  border-radius: 20px;
+  padding: 4rem 6rem;
+  color: #fff;
+  text-align: center;
+  font-size: 64rem;       /* ukuran font dasar */
+  opacity: 0;
+  transition: all 0.5s ease-out;
+  z-index: 3000;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+/* Saat tampil (“.show”), scale tetap 2 dan transform-nya memastikan benar-benar
+   di tengah */
+.new-donor-popup.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(10);
+  /* jika mau ada animasi pulse, tambahkan keyframe di sini */
+}
+
+
+      @keyframes popupPulse {
+        0%, 100% { transform: translateX(-50%) translateY(0) scale(1); }
+        25% { transform: translateX(-50%) translateY(-10px) scale(1.05); }
+        50% { transform: translateX(-50%) translateY(0) scale(1); }
+        75% { transform: translateX(-50%) translateY(-5px) scale(1.02); }
+      }
+
+      .new-donor-popup .popup-header {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.9;
+      }
+
+      .new-donor-popup .popup-name {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .new-donor-popup .popup-amount {
+        font-size: 3rem;
+        font-weight: bold;
+        color: #ffff00;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+.top3-card .donor-name {
+  font-size: 10rem;
+  font-weight: 600;
+  color: #ffffff;        /* pastikan putih */
+}
+.top3-card .wilayah {
+  font-size: 8rem;
+  color: #cccccc;        /* sedikit lebih terang */
+  margin-bottom: 8px;
+}
+
+
+.top3-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg,transparent,rgba(255,255,255,0.8),transparent);
+  animation: shimmer 3s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%,100% { transform: translateX(-100%); }
+  50%     { transform: translateX(200%); }
+}
+.top3-card:hover {
+  transform: translateY(-15px) rotateX(5deg);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+  background: rgba(255,255,255,0.12);
+}
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-10px); }
+}
+.top3-card:nth-child(1) { animation: float 6s ease-in-out infinite; }
+.top3-card:nth-child(2) { animation: float 6s ease-in-out infinite 2s; }
+.top3-card:nth-child(3) { animation: float 6s ease-in-out infinite 4s; }
+
+.medal {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  display: block;
+  animation: rotate 4s linear infinite;
+}
+@keyframes rotate {
+  0%   { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+.amount {
+  font-size: 8rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+  /* Chrome, Safari */
+  -webkit-background-clip: text;
+  /* Standar */
+  background-clip: text;
+  /* Chrome, Safari */
+  -webkit-text-fill-color: transparent;
+  /* Standar */
+  color: transparent;
+  animation: amountPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes amountPulse { 0%{transform:scale(1)} 100%{transform:scale(1.05)} }
+
+/* Main layout */
+.main-content {
+  display: flex;
+  gap: 40px;
+  height: calc(100vh - 450px);
+}
+
+/* Chart section — fixed size, no scroll */
+.chart-section {
+  flex: 0 0 95%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  overflow: visible;
+}
+.chart-section h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 30px;
+  text-align: center;
+  opacity: 0.9;
+}
+.chart-section {
+  flex: 0 0 25%;
+  display: flex;
+  flex-direction: column;
+}
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;       /* isi penuh tinggi parent */
+}
+.chart-wrapper canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+}
+/* Buat container kanvas 1:1 */
+.chart-wrapper::before {
+  content: '';
+  display: block;
+  padding-top: 100%; /* 1:1 aspect ratio */
+  pointer-events: none;
+}
+
+#donutChart {
+  height: auto;
+  transform: scale(2);
+  margin-top: auto;
+  transform-origin: center;
+  filter: drop-shadow(0 10px 25px rgba(0,0,0,0.3));
+  transition: all 0.3s ease;
+}
+#donutChart:hover {
+  filter: drop-shadow(0 15px 35px rgba(0,0,0,0.4));
+  transform: scale(2);
+}
+.progress-display {
+  text-align: center;
+  margin-top: 100px;
+  margin-bottom: 1500px;
+  padding: 20px;
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+  animation: progressGlow 4s ease-in-out infinite alternate;
+}
+@keyframes progressGlow {
+  0%   { box-shadow: 0 0 20px rgba(255,255,255,0.1); }
+  100% { box-shadow: 0 0 30px rgba(255,255,255,0.2); }
+}
+.progress-amount    { font-size: 8rem; font-weight: 600; color: #fff; margin-bottom: 1px; }
+.progress-percentage {
+  font-size: 10rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  /* Стандартное свойство */
+  background-clip: text;
+  /* Вендор-префикс для WebKit-браузеров */
+  -webkit-background-clip: text;
+  /* Чтобы текст был прозрачным и пропускал фон через клип */
+  -webkit-text-fill-color: transparent;
+}
+
+/* container statis: abu-abu track */
+.progress-bar {
+  width: 100%;               /* lebar bar */
+  height: 100%;             /* tinggi statis */
+  background: #0E4D92;
+  border: 1px solid #0E4D92;
+  border-radius: 8px;
+  position: relative;
+  margin: 0 auto 20px;       /* center + jarak bawah */
+  overflow: hidden;
+}
+
+/* isi bar: hijau, tumbuh dari bottom */
+.progress-bar-fill {
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%;
+  height: 0%;                /* akan diubah via JS */
+  background: #FF5B00;
+  transition: height 0.8s ease;
+}
+
+
+   .donors-section {
+      flex: 75;
+      padding: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+.donors-section h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 30px;
+  text-align: center;
+  opacity: 0.9;
+}
+.donors-scroll {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+
+.donors-list {
+  display: flex;
+  flex-direction: column;
+}
+
+
+.donors-list.scrolling {
+  animation: scrollLoop 15s linear infinite;
+}
+
+@keyframes scrollLoop {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
+
+@keyframes smoothScroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+.donor-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 25px;
+  margin-bottom: 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.donor-item::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
+  transition: left 0.5s ease;
+}
+.donor-item:hover::before { left: 100%; }
+.donor-item:hover { transform: translateX(10px); background: rgba(255,255,255,0.08); box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+.donor-name-list { font-size: 10rem; font-weight: 1000; color: #fff; opacity: 0.9; }
+.donor-amount    { font-size: 10rem; font-weight: 1200; color: #4ecdc4; }
+.wilayah-list { font-size: 1.7rem; font-weight: 1100; color: #cccccc;}
+
+/* подсветка новых доноров */
+.donor-item.new-highlight {
+  background-color: #ff5100 !important;
+  animation: glow-border 2s ease-in-out infinite alternate;
+}
+
+.donor-item .new-tag {
+  color: red;
+  font-weight: bold;
+  margin-left: 0.5rem;
+  font-size: 1.2em;
+}
+
+
+@keyframes glow-border {
+  from { box-shadow: 0 0 5px cyan; }
+  to   { box-shadow: 0 0 20px cyan; }
+}
+
+
+/* Popup Styles – ganti blok .info-popup Anda menjadi: */
+.info-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  /* lebarkan jadi 60% viewport lebar, maksimal 800px */
+  width: 99%;
+  /* atur tinggi sesuai konten, hapus fixed height jika ada */
+  height: 99%;
+  padding: 2rem;
+  background: rgba(10, 10, 15, 0.95);
+  backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.info-popup.fade-out { opacity: 0; }
+.info-header {
+  display: flex; align-items: center; gap: 1rem;
+  font-size: 10rem; font-weight: 700; color: #fff;
+  margin-bottom: 1.5rem;
+}
+.info-header h1 {
+  font-size: 4.4rem; font-weight: 600; margin: 0;
+}
+.info-icon { font-size: 3.5rem; animation: bounce 2s ease-in-out infinite; }
+@keyframes bounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px);} }
+.info-body {
+  white-space: normal;
+  word-break: break-word;
+  flex: 1; margin-top: 1.5rem;
+  text-align: center;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: calc(100% - /* tinggi header + padding */ 6rem);
+  align-items: center;
+  justify-content: center;
+  font-size: 10rem; line-height: 2.4; color: rgba(255,255,255,0.9);
+  overflow-y: auto; padding-right: 1rem;
+  padding: 1rem;
+}
+
+.judulatas{
+  font-size: 10rem; animation: fadeInUp 1s ease-out 0.5s forwards;
+}
+
+/* Loading animation */
+.loading { font-size: 4rem; opacity: 0; animation: fadeInUp 1s ease-out 0.5s forwards; }
+@keyframes fadeInUp {
+  0%   { opacity: 0; transform: translateY(30px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .main-content { flex-direction: column; height: auto; }
+  .chart-section, .donors-section { min-height: 400px; }
+}
+@media (max-width: 768px) {
+  body { padding: 20px; }
+  h1 { font-size: 2.2rem; }
+  .top3-container { flex-direction: column; gap: 20px; }
+  .top3-card { min-width: 100%; }
+}
+
+.new-donor-popup {
+  /* pastikan centering yang tepat */
+  top: 25%; left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  /* ukuran dasar lebih besar */
+  padding: 3rem 4rem;     /* ruang dalam diperbesar */
+  font-size: 2rem;        /* skala font masuknya */
+  width: auto;
+  max-width: 80vw;
+  /* initial state: sembunyikan dengan scale kecil */
+  opacity: 0;
+  transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.new-donor-popup.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(3);  /* tampil 1×, penuh */
+}
+
+
+
+@keyframes glow {
+  from { box-shadow: 0 0 8px rgba(79,172,254,0.6); }
+  to   { box-shadow: 0 0 20px rgba(79,172,254,1); }
+}
+
+@keyframes sprinkle {
+  0%   { transform: translateX(-50%) scale(1) translateY(0); }
+  25%  { transform: translateX(-50%) scale(1.05) translateY(-5px); }
+  50%  { transform: translateX(-50%) scale(1) translateY(0); }
+  75%  { transform: translateX(-50%) scale(1.05) translateY(-5px); }
+  100% { transform: translateX(-50%) scale(1) translateY(0); }
+}
+
+/* Styling isi popup */
+.new-donor-popup .nd-name {
+  font-size: 1.4rem; font-weight: 600; margin-bottom: 0.5rem;
+}
+.new-donor-popup .nd-amount {
+  font-size: 1.8rem; font-weight: 700; color: #4ecdc4;
+}
