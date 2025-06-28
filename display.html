@@ -12,7 +12,6 @@
   </head>
   <body>
     <div class="aspect-box">
-      <br /><br />
       <br />
       <br />
 
@@ -20,12 +19,9 @@
       <center>
         <h1 class="loading"></h1>
         <h1 class="judulatas">
-          JAMUAN KASIH<br />
-          HKBP PERUMNAS II BEKASI - EFRATA 2025
+          Lorem Ipsum
         </h1>
       </center>
-      <br />
-      <br />
       <br />
       <br />
       <br />
@@ -34,9 +30,10 @@
 
       <div class="main-content loading">
         <div class="chart-section glass-container">
-          <!-- track + fill bar -->
-          <div class="progress-bar">
-            <div id="barFill" class="progress-bar-fill"></div>
+          <!-- Pie Chart -->
+          <div class="chart-wrapper">
+            <canvas id="pieChart"></canvas>
+            <div id="percentageDisplay" class="percentage-center"></div>
           </div>
 
           <!-- teks di bawah -->
@@ -63,7 +60,7 @@
         // Inisialisasi Firebase
         firebase.initializeApp({
           databaseURL:
-            "",
+            "firebase link",
         });
         const db = firebase.database();
 
@@ -81,7 +78,7 @@
         let sheetTerpilih = null;
         let currentTarget = 0;
         let dataDonatur = [];
-        let donutChart = null;
+        let pieChart = null;
         let infoTimeout = null;
         let dataWilayah = [];
         let isSheetsLoaded = false;
@@ -89,6 +86,7 @@
         let initialDonors = []; // bakal kita tampilkan sekali setelah data siap
         let highlightTimeouts = {}; // key = donorKey, value = timeoutId
         let knownDonors = {}; // key = nama||wilayah
+        let aggMap = {}; // global aggregation map
 
         // Ambil target dari sel G2
         function applyTargetFromSheet() {
@@ -160,16 +158,16 @@
             element.classList.add("new-highlight");
           });
 
-          if (!highlightTimeouts[donorKey]) {
-            donorElements.forEach((el) => el.classList.add("new-highlight"));
-            // atur sekali untuk menghilangkan highlight setelah 5 menit
-            highlightTimeouts[donorKey] = setTimeout(() => {
-              donorElements.forEach((el) =>
-                el.classList.remove("new-highlight")
-              );
-              delete highlightTimeouts[donorKey];
-            }, 5 * 60 * 1000); // 5 menit
-          }
+          // Set timeout to remove highlight after 10 minutes
+          highlightTimeouts[donorKey] = setTimeout(() => {
+            const elements = document.querySelectorAll(
+              `[data-key="${donorKey}"]`
+            );
+            elements.forEach((el) =>
+              el.classList.remove("new-highlight")
+            );
+            delete highlightTimeouts[donorKey];
+          }, 10 * 60 * 1000); // 10 menit
         }
 
         function checkForNewDonors() {
@@ -251,8 +249,6 @@
               // jumlahkan jumlah
               map[d.nama].jumlah += d.jumlah;
 
-              //bug jumlah
-
               // jika belum ada wilayah, isi dari yang baru
               if (!map[d.nama].wilayah && d.wilayah) {
                 map[d.nama].wilayah = d.wilayah;
@@ -267,8 +263,9 @@
           document.getElementById("top3Container").innerHTML = top3
             .map((d) => {
               const key = `${d.nama}||${d.wilayah}`;
+              const existingHighlight = highlightTimeouts[key] ? 'new-highlight' : '';
               return `
-                <div class="top3-card" data-key="${key}">
+                <div class="top3-card ${existingHighlight}" data-key="${key}">
                   <div class="wilayah">${d.wilayah}</div>
                   <div class="donor-name">
                     ${d.nama.replace(/\s*\/\s*/, "<br>/")}
@@ -293,8 +290,9 @@
           ul.innerHTML = others
             .map((d) => {
               const key = `${d.nama}||${d.wilayah}`;
+              const existingHighlight = highlightTimeouts[key] ? 'new-highlight' : '';
               return `
-              <li class="donor-item" data-key="${key}">
+              <li class="donor-item ${existingHighlight}" data-key="${key}">
                 <span class="donor-name-list">${d.nama}</span>
                 <span class="donor-amount">Rp ${d.jumlah.toLocaleString(
                   "id-ID"
@@ -306,6 +304,7 @@
 
           setupInfiniteScroll();
         }
+        
         function setupInfiniteScroll() {
           const ul = document.getElementById("donorsList");
           // Ambil hanya elemen asli (tanpa .clone)
@@ -324,36 +323,82 @@
               ul.appendChild(clone);
             });
             ul.classList.add("scrolling");
+            
+            // Adjust scroll speed based on number of items
+            // Fewer items = faster scroll
+            const itemCount = originals.length;
+            const baseSpeed = 10; // base speed in seconds (doubled from 15)
+            const speedMultiplier = Math.max(0.5, Math.min(2, 50 / itemCount));
+            const scrollDuration = baseSpeed * speedMultiplier;
+            
+            ul.style.animationDuration = `${scrollDuration}s`;
           } else {
             // Kalau 11 atau kurang → hentikan scrolling
             ul.classList.remove("scrolling");
           }
         }
 
-        // Render Chart & Progress
+        // Render Pie Chart & Progress
         function renderChart() {
           const total = dataDonatur.reduce((s, d) => s + d.jumlah, 0);
           const pct =
             currentTarget > 0
-              ? Math.min(100, Math.round((total / currentTarget) * 100))
+              ? ((total / currentTarget) * 100)
               : 0;
+          const pctDisplay = pct.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const remaining = currentTarget - total;
+          const remainingPct = 100 - pct;
 
-          // update tinggi fill-bar
-          const fillEl = document.getElementById("barFill");
-          fillEl.style.height = pct + "%";
+          // Create or update pie chart
+          const ctx = document.getElementById('pieChart').getContext('2d');
+          
+          if (pieChart) {
+            pieChart.data.datasets[0].data = [total, Math.max(0, remaining)];
+            pieChart.update();
+          } else {
+            pieChart = new Chart(ctx, {
+              type: 'doughnut',
+              data: {
+                datasets: [{
+                  data: [total, Math.max(0, remaining)],
+                  backgroundColor: [
+                    '#FF5B00',
+                    'rgba(14, 77, 146, 0.3)'
+                  ],
+                  borderWidth: 0,
+                  borderRadius: 5
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '65%',
+                animation: {
+                  animateRotate: true,
+                  animateScale: true,
+                  duration: 1500,
+                  easing: 'easeInOutQuart'
+                },
+                plugins: {
+                  legend: {
+                    display: false
+                  },
+                  tooltip: {
+                    enabled: false
+                  }
+                }
+              }
+            });
+          }
+
+          // Update percentage display in center
+          document.getElementById("percentageDisplay").innerHTML = `${pctDisplay}%`;
 
           // update teks progres
           document.getElementById("progressDisplay").innerHTML = `
             <div class="progress-amount">
+              Total Donasi<br>
               Rp ${total.toLocaleString("id-ID")}
-            </div>
-            <div class="progress-amount">
-              / Rp ${currentTarget.toLocaleString("id-ID")}
-            </div>
-            <br>
-            <div class="progress-percentage">
-              ${pct}%
-            </div>
           `;
         }
 
@@ -449,8 +494,6 @@
           // setelah kedua load, parse + render list (sekali saja)
           dataDonatur = parseSheet(rawSheetsData[sheetTerpilih] || {});
           renderAll();
-          // mulai listen entri baru untuk popup
-          listenNewDonorPopup();
         }
 
         function aggregateAndParse(sheet) {
@@ -541,10 +584,6 @@
               (a, b) => b.jumlah - a.jumlah
             );
             renderAll();
-
-            // (opsional) highlight jika bukan top3
-            const idx = dataDonatur.findIndex((d) => d.key === key);
-            if (idx >= 3) highlightDonorInList(key);
           });
 
         db.ref("log").once("value", (snap) => {
@@ -573,13 +612,6 @@
             showInfo(v.text);
             db.ref("kontrol/popup/trigger").set(false);
           }
-        });
-
-        db.ref("sheets").on("value", (snap) => {
-          rawSheetsData = snap.val() || {};
-          // jika G2 berubah, applyTargetFromSheet() membaca ulang
-          applyTargetFromSheet();
-          updateDisplay();
         });
 
         // Add loading animation trigger
